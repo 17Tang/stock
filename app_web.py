@@ -4,26 +4,27 @@ import plotly.graph_objects as graph_objects
 import streamlit as st
 import yfinance as yf
 
-# 1. 網頁基本設定 (設定為寬螢幕模式，並強制套用行動端側邊欄預設隱藏)
+# 1. 網頁基本設定 (預設隱藏側邊欄)
 st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 減少網頁頂部空白，讓手機畫面更緊湊
+# 減少頂部空白與美化數據卡
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem;}
-        div[data-testid="stMetric"] { background-color: #1e222d; padding: 5px 10px; border-radius: 5px; }
+        .block-container {padding-top: 0.8rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem;}
+        div[data-testid="stMetric"] { background-color: #1e222d; padding: 6px 10px; border-radius: 5px; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
 
-# 2. 數據下載與核心計算 (保持原本強大的上市櫃自動辨識)
+# 2. 數據下載與核心計算 (天數固定為 365 天)
 @st.cache_data(ttl=600)
-def load_data_and_calculate(stock_id, days_back):
+def load_data_and_calculate(stock_id):
+    days_back = 365  # 預設固定 365 天
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days_back)
 
@@ -43,9 +44,11 @@ def load_data_and_calculate(stock_id, days_back):
     if isinstance(df_daily.columns, pd.MultiIndex):
         df_daily.columns = df_daily.columns.get_level_values(0)
 
+    # 計算 37 MA 與 160 MA
     df_daily["MA37"] = df_daily["Close"].rolling(window=37).mean()
     df_daily["MA160"] = df_daily["Close"].rolling(window=160).mean()
 
+    # 核心數據計算
     latest_day = df_daily.iloc[-1]
     high = float(latest_day["High"])
     low = float(latest_day["Low"])
@@ -77,28 +80,29 @@ def load_data_and_calculate(stock_id, days_back):
     return df_daily, prices, ticker_id
 
 
-# --- 手機版置頂控制面板 ---
-with st.expander("🔍 點擊此處：切換股票 / 設定天數", expanded=False):
-    stock_id = st.text_input("請輸入股票代號", value="2330")
-    days_back = st.slider("讀取歷史天數", min_value=200, max_value=500, value=300)
+# --- 頂部超極簡控制區 ---
+with st.expander("🔍 點擊輸入股號", expanded=False):
+    stock_id = st.text_input(
+        "請輸入股票代號（上市/上櫃/美股）", value="2330"
+    ).strip()
 
 # --- 網頁畫面渲染 ---
 if stock_id:
-    df, prices, full_ticker = load_data_and_calculate(stock_id, days_back)
+    df, prices, full_ticker = load_data_and_calculate(stock_id)
 
     if df is not None:
-        # 標題與股票名稱
-        st.markdown(f"### 📊 {full_ticker} 關鍵技術指標")
+        # 標題
+        st.markdown(f"### 📊 {full_ticker}")
 
-        # 行動端優化：使用緊湊型欄位排列（自適應一排到三排）
+        # 五大數據指標
         c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
         c1.metric(label="🔴 壓力", value=f"{prices['resistance']:.1f}")
-        c2.metric(label="🍏 日關鍵", value=f"{prices['day']:.1f}")
-        c3.metric(label="🔷 周關鍵", value=f"{prices['week']:.1f}")
-        c4.metric(label="🔶 月關鍵", value=f"{prices['month']:.1f}")
+        c2.metric(label="🍏 日關", value=f"{prices['day']:.1f}")
+        c3.metric(label="🔷 周關", value=f"{prices['week']:.1f}")
+        c4.metric(label="🔶 月關", value=f"{prices['month']:.1f}")
         c5.metric(label="🟢 支撐", value=f"{prices['support']:.1f}")
 
-        # 4. 互動式 K 線圖
+        # 擷取最後 60 根 K 線顯示
         df_plot = df.tail(60).copy()
         df_plot["Date_Str"] = df_plot.index.strftime("%Y-%m-%d")
 
@@ -118,7 +122,7 @@ if stock_id:
             )
         )
 
-        # 均線
+        # 均線 (MA)
         fig.add_trace(
             graph_objects.Scatter(
                 x=df_plot["Date_Str"],
@@ -191,19 +195,18 @@ if stock_id:
             )
         )
 
-        # 佈局優化（特別針對手機端優化圖例配置）
+        # 佈局優化
         fig.update_layout(
-            height=500,  # 稍微縮減高度，適應手機單手操作
+            height=520,
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
-            margin=dict(l=10, r=10, t=10, b=10),
+            margin=dict(l=5, r=5, t=10, b=10),
             hovermode="x unified",
-            # 手機版圖例改放到圖表正下方，水平排列，避免擠壓到右側空間
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.4,
+                y=-0.45,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
@@ -211,4 +214,4 @@ if stock_id:
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.error(f"❌ 無法獲獲股票 {stock_id} 的資料。")
+        st.error(f"❌ 無法獲取股票 {stock_id} 的資料。")
