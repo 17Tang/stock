@@ -4,18 +4,16 @@ import plotly.graph_objects as graph_objects
 import streamlit as st
 import yfinance as yf
 
-# 1. 網頁基本設定 (預設隱藏側邊欄)
+# 1. 網頁基本設定
 st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# ⚡ 核心修正：將 padding-top 從 0.5rem 微調回 1.8rem，徹底解決頂部被黑條截斷的問題
+# 頂部內邊距微調
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 1.8rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
-        div[data-testid="stMetric"] { background-color: #1e222d; padding: 4px 8px; border-radius: 5px; }
-        div[data-testid="stForm"] { border: none; padding: 0px; }
+        .block-container {padding-top: 1.5rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
         h3 { margin-top: 0rem; margin-bottom: 0.5rem; }
     </style>
 """,
@@ -23,7 +21,7 @@ st.markdown(
 )
 
 
-# 2. 數據下載與核心計算 (天數固定為 365 天)
+# 2. 數據下載與核心計算 (固定 365 天)
 @st.cache_data(ttl=600)
 def load_data_and_calculate(stock_id):
     days_back = 365
@@ -50,7 +48,6 @@ def load_data_and_calculate(stock_id):
     df_daily["MA37"] = df_daily["Close"].rolling(window=37).mean()
     df_daily["MA160"] = df_daily["Close"].rolling(window=160).mean()
 
-    # 核心數據計算
     latest_day = df_daily.iloc[-1]
     high = float(latest_day["High"])
     low = float(latest_day["Low"])
@@ -82,26 +79,44 @@ def load_data_and_calculate(stock_id):
     return df_daily, prices, ticker_id
 
 
-# --- 頂部直覺輸入區 (移除了外層包裹，讓版面更穩定) ---
+# --- 頂部直覺輸入區 ---
 stock_id = st.text_input("🔍 輸入股票代號", value="2330").strip()
 
-# --- 網頁畫面渲染 ---
 if stock_id:
     df, prices, full_ticker = load_data_and_calculate(stock_id)
 
     if df is not None:
-        # 當前查詢的股票標題
+        # 標題
         st.markdown(f"### 📊 {full_ticker}")
 
-        # 五大數據指標
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
-        c1.metric(label="🔴壓力", value=f"{prices['resistance']:.1f}")
-        c2.metric(label="🍏日關", value=f"{prices['day']:.1f}")
-        c3.metric(label="🔷周關", value=f"{prices['week']:.1f}")
-        c4.metric(label="🔶月關", value=f"{prices['month']:.1f}")
-        c5.metric(label="🟢支撐", value=f"{prices['support']:.1f}")
+        # ⚡ 終極修正：捨棄 st.metric，改用自適應 HTML 表格字卡，強制在手機上維持緊湊排列
+        html_table = f"""
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #ef5350; font-size: 11px; font-weight: bold;">🔴 壓力</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['resistance']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #4CAF50; font-size: 11px; font-weight: bold;">🍏 日關</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['day']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #2196F3; font-size: 11px; font-weight: bold;">🔷 周關</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['week']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #FF5722; font-size: 11px; font-weight: bold;">🔶 月關</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['month']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center; grid-column: span 2;">
+                <span style="color: #2E7D32; font-size: 11px; font-weight: bold;">🟢 支撐</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['support']:.1f}</span>
+            </div>
+        </div>
+        """
+        st.markdown(html_table, unsafe_allow_html=True)
 
-        # 擷取最後 60 根 K 線顯示
+        # 擷取最後 60 根 K 線
         df_plot = df.tail(60).copy()
         df_plot["Date_Str"] = df_plot.index.strftime("%Y-%m-%d")
 
@@ -141,7 +156,7 @@ if stock_id:
             )
         )
 
-        # 關鍵技術價橫線
+        # 技術水平線
         x_range = df_plot["Date_Str"]
         fig.add_trace(
             graph_objects.Scatter(
@@ -194,9 +209,9 @@ if stock_id:
             )
         )
 
-        # 佈局優化
+        # 佈局配置
         fig.update_layout(
-            height=510,  # 稍微縮減10px，挪給上方保留的安全高度
+            height=460,  # 微調高度確保手機不需滾動
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
@@ -205,7 +220,7 @@ if stock_id:
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.45,
+                y=-0.48,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
@@ -213,4 +228,4 @@ if stock_id:
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.error(f"❌ 無法獲取股票 {stock_id} 的資料。")
+        st.error(f"❌ 無法獲獲股票 {stock_id} 的資料。")
