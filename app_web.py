@@ -9,12 +9,14 @@ st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 減少頂部空白與美化數據卡
+# 終極壓榨空間：減少所有元件的上下間距與外邊距，完美達成一頁式
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 0.8rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem;}
-        div[data-testid="stMetric"] { background-color: #1e222d; padding: 6px 10px; border-radius: 5px; }
+        .block-container {padding-top: 0.5rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
+        div[data-testid="stMetric"] { background-color: #1e222d; padding: 4px 8px; border-radius: 5px; }
+        div[data-testid="stForm"] { border: none; padding: 0px; }
+        h3 { margin-top: 0rem; margin-bottom: 0.3rem; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -24,7 +26,7 @@ st.markdown(
 # 2. 數據下載與核心計算 (天數固定為 365 天)
 @st.cache_data(ttl=600)
 def load_data_and_calculate(stock_id):
-    days_back = 365  # 預設固定 365 天
+    days_back = 365
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days_back)
 
@@ -80,27 +82,24 @@ def load_data_and_calculate(stock_id):
     return df_daily, prices, ticker_id
 
 
-# --- 頂部超極簡控制區 ---
-with st.expander("🔍 點擊輸入股號", expanded=False):
-    stock_id = st.text_input(
-        "請輸入股票代號（上市/上櫃/美股）", value="2330"
-    ).strip()
+# --- 頂部直覺輸入區 (完全無摺疊) ---
+stock_id = st.text_input("🔍 輸入股票代號", value="2330").strip()
 
 # --- 網頁畫面渲染 ---
 if stock_id:
     df, prices, full_ticker = load_data_and_calculate(stock_id)
 
     if df is not None:
-        # 標題
+        # 標題與股號一體化，節省空間
         st.markdown(f"### 📊 {full_ticker}")
 
         # 五大數據指標
         c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
-        c1.metric(label="🔴 壓力", value=f"{prices['resistance']:.1f}")
-        c2.metric(label="🍏 日關", value=f"{prices['day']:.1f}")
-        c3.metric(label="🔷 周關", value=f"{prices['week']:.1f}")
-        c4.metric(label="🔶 月關", value=f"{prices['month']:.1f}")
-        c5.metric(label="🟢 支撐", value=f"{prices['support']:.1f}")
+        c1.metric(label="🔴壓力", value=f"{prices['resistance']:.1f}")
+        c2.metric(label="🍏日關", value=f"{prices['day']:.1f}")
+        c3.metric(label="🔷周關", value=f"{prices['week']:.1f}")
+        c4.metric(label="🔶月關", value=f"{prices['month']:.1f}")
+        c5.metric(label="🟢支撐", value=f"{prices['support']:.1f}")
 
         # 擷取最後 60 根 K 線顯示
         df_plot = df.tail(60).copy()
@@ -197,16 +196,16 @@ if stock_id:
 
         # 佈局優化
         fig.update_layout(
-            height=520,
+            height=530,  # 高度自適應直向螢幕
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
-            margin=dict(l=5, r=5, t=10, b=10),
+            margin=dict(l=5, r=5, t=5, b=5),  # 四週邊距壓到最緊
             hovermode="x unified",
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.45,
+                y=-0.42,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
