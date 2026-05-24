@@ -9,14 +9,14 @@ st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 終極壓榨空間：減少所有元件的上下間距與外邊距，完美達成一頁式
+# ⚡ 核心修正：將 padding-top 從 0.5rem 微調回 1.8rem，徹底解決頂部被黑條截斷的問題
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 0.5rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
+        .block-container {padding-top: 1.8rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
         div[data-testid="stMetric"] { background-color: #1e222d; padding: 4px 8px; border-radius: 5px; }
         div[data-testid="stForm"] { border: none; padding: 0px; }
-        h3 { margin-top: 0rem; margin-bottom: 0.3rem; }
+        h3 { margin-top: 0rem; margin-bottom: 0.5rem; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -82,7 +82,7 @@ def load_data_and_calculate(stock_id):
     return df_daily, prices, ticker_id
 
 
-# --- 頂部直覺輸入區 (完全無摺疊) ---
+# --- 頂部直覺輸入區 (移除了外層包裹，讓版面更穩定) ---
 stock_id = st.text_input("🔍 輸入股票代號", value="2330").strip()
 
 # --- 網頁畫面渲染 ---
@@ -90,7 +90,7 @@ if stock_id:
     df, prices, full_ticker = load_data_and_calculate(stock_id)
 
     if df is not None:
-        # 標題與股號一體化，節省空間
+        # 當前查詢的股票標題
         st.markdown(f"### 📊 {full_ticker}")
 
         # 五大數據指標
@@ -196,16 +196,16 @@ if stock_id:
 
         # 佈局優化
         fig.update_layout(
-            height=530,  # 高度自適應直向螢幕
+            height=510,  # 稍微縮減10px，挪給上方保留的安全高度
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
-            margin=dict(l=5, r=5, t=5, b=5),  # 四週邊距壓到最緊
+            margin=dict(l=5, r=5, t=5, b=5),
             hovermode="x unified",
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.42,
+                y=-0.45,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
