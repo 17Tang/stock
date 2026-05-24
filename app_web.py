@@ -4,16 +4,16 @@ import plotly.graph_objects as graph_objects
 import streamlit as st
 import yfinance as yf
 
-# 1. 網頁基本設定
+# 1. 網頁基本設定 (預設隱藏側邊欄)
 st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 頂部內邊距微調與卡片動態樣式
+# ⚡ 終極防護修正：將 padding-top 拉大到 3.5rem，徹底推開手機瀏覽器網址列與系統黑條
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 1.8rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
+        .block-container {padding-top: 3.5rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
         h3 { margin-top: 0rem; margin-bottom: 0.5rem; }
     </style>
 """,
@@ -22,7 +22,7 @@ st.markdown(
 
 
 # 2. 數據下載與核心計算 (固定 365 天)
-@st.cache_data(ttl=60)  # 將快取時間縮短至 1 分鐘，方便現價更新
+@st.cache_data(ttl=60)  # 1分鐘快取，兼顧效率與即時現價
 def load_data_and_calculate(stock_id):
     days_back = 365
     end_date = datetime.date.today()
@@ -52,7 +52,7 @@ def load_data_and_calculate(stock_id):
     latest_day = df_daily.iloc[-1]
     high = float(latest_day["High"])
     low = float(latest_day["Low"])
-    current_price = float(latest_day["Close"])  # 最新收盤價（現價）
+    current_price = float(latest_day["Close"])  # 最新現價
 
     day_key_price = (high + low) / 2
 
@@ -92,19 +92,19 @@ if stock_id:
         # 標題
         st.markdown(f"### 📊 {full_ticker}")
 
-        # ⚡ 完美對稱修正：加入現價凑齊 6 格，全面換用專業方塊標籤
+        # ⚡ 顏色優化：將股票現價的標題與數字顏色完全統一為 #ffb74d (亮橘色)，方塊也換成橘色 🟧
         html_table = f"""
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
                 <span style="color: #ef5350; font-size: 11px; font-weight: bold;">🟥 日線壓力</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['resistance']:.1f}</span>
             </div>
-            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #26a69a; font-size: 11px; font-weight: bold;">🟩 股票現價</span><br>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center; border: 1px solid #ffb74d;">
+                <span style="color: #ffb74d; font-size: 11px; font-weight: bold;">🟧 股票現價</span><br>
                 <span style="color: #ffb74d; font-size: 16px; font-weight: bold;">{prices['current']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #2E7D32; font-size: 11px; font-weight: bold;">🟩 日線支撐</span><br>
+                <span style="color: #26a69a; font-size: 11px; font-weight: bold;">🟩 日線支撐</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['support']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
@@ -116,7 +116,7 @@ if stock_id:
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['week']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #FF5722; font-size: 11px; font-weight: bold;">🟧 月關鍵價</span><br>
+                <span style="color: #ff7043; font-size: 11px; font-weight: bold;">🟫 月關鍵價</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['month']:.1f}</span>
             </div>
         </div>
@@ -218,7 +218,7 @@ if stock_id:
 
         # 佈局配置
         fig.update_layout(
-            height=460,
+            height=450,
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
@@ -227,7 +227,7 @@ if stock_id:
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.48,
+                y=-0.5,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
