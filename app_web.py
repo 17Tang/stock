@@ -9,11 +9,11 @@ st.set_page_config(
     page_title="行動看盤系統", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 頂部內邊距微調
+# 頂部內邊距微調與卡片動態樣式
 st.markdown(
     """
     <style>
-        .block-container {padding-top: 1.5rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
+        .block-container {padding-top: 1.8rem; padding-bottom: 0rem; padding-left: 0.4rem; padding-right: 0.4rem;}
         h3 { margin-top: 0rem; margin-bottom: 0.5rem; }
     </style>
 """,
@@ -22,7 +22,7 @@ st.markdown(
 
 
 # 2. 數據下載與核心計算 (固定 365 天)
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=60)  # 將快取時間縮短至 1 分鐘，方便現價更新
 def load_data_and_calculate(stock_id):
     days_back = 365
     end_date = datetime.date.today()
@@ -48,9 +48,11 @@ def load_data_and_calculate(stock_id):
     df_daily["MA37"] = df_daily["Close"].rolling(window=37).mean()
     df_daily["MA160"] = df_daily["Close"].rolling(window=160).mean()
 
+    # 核心數據計算
     latest_day = df_daily.iloc[-1]
     high = float(latest_day["High"])
     low = float(latest_day["Low"])
+    current_price = float(latest_day["Close"])  # 最新收盤價（現價）
 
     day_key_price = (high + low) / 2
 
@@ -70,6 +72,7 @@ def load_data_and_calculate(stock_id):
     day_support = low - (high - low) * 0.382
 
     prices = {
+        "current": current_price,
         "day": day_key_price,
         "week": week_key_price,
         "month": month_key_price,
@@ -89,28 +92,32 @@ if stock_id:
         # 標題
         st.markdown(f"### 📊 {full_ticker}")
 
-        # ⚡ 終極修正：捨棄 st.metric，改用自適應 HTML 表格字卡，強制在手機上維持緊湊排列
+        # ⚡ 完美對稱修正：加入現價凑齊 6 格，全面換用專業方塊標籤
         html_table = f"""
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #ef5350; font-size: 11px; font-weight: bold;">🔴 壓力</span><br>
+                <span style="color: #ef5350; font-size: 11px; font-weight: bold;">🟥 日線壓力</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['resistance']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #4CAF50; font-size: 11px; font-weight: bold;">🍏 日關</span><br>
+                <span style="color: #26a69a; font-size: 11px; font-weight: bold;">🟩 股票現價</span><br>
+                <span style="color: #ffb74d; font-size: 16px; font-weight: bold;">{prices['current']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #2E7D32; font-size: 11px; font-weight: bold;">🟩 日線支撐</span><br>
+                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['support']:.1f}</span>
+            </div>
+            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
+                <span style="color: #a5d6a7; font-size: 11px; font-weight: bold;">🟨 日關鍵價</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['day']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #2196F3; font-size: 11px; font-weight: bold;">🔷 周關</span><br>
+                <span style="color: #2196F3; font-size: 11px; font-weight: bold;">🟦 周關鍵價</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['week']:.1f}</span>
             </div>
             <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center;">
-                <span style="color: #FF5722; font-size: 11px; font-weight: bold;">🔶 月關</span><br>
+                <span style="color: #FF5722; font-size: 11px; font-weight: bold;">🟧 月關鍵價</span><br>
                 <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['month']:.1f}</span>
-            </div>
-            <div style="background-color: #1e222d; padding: 6px; border-radius: 6px; text-align: center; grid-column: span 2;">
-                <span style="color: #2E7D32; font-size: 11px; font-weight: bold;">🟢 支撐</span><br>
-                <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{prices['support']:.1f}</span>
             </div>
         </div>
         """
@@ -211,7 +218,7 @@ if stock_id:
 
         # 佈局配置
         fig.update_layout(
-            height=460,  # 微調高度確保手機不需滾動
+            height=460,
             xaxis_rangeslider_visible=False,
             xaxis=dict(type="category", tickangle=-45),
             template="plotly_dark",
@@ -228,4 +235,4 @@ if stock_id:
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.error(f"❌ 無法獲獲股票 {stock_id} 的資料。")
+        st.error(f"❌ 無法獲取股票 {stock_id} 的資料。")
