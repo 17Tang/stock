@@ -25,8 +25,10 @@ st.markdown(
 @st.cache_data(ttl=60)  # 1分鐘快取，兼顧效率與即時現價
 def load_data_and_calculate(stock_id):
     days_back = 365
-    end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=days_back)
+# --- 修改後的寫法 ---
+    today = datetime.date.today()
+    end_date = today + datetime.timedelta(days=1)  # 強制包含今天
+    start_date = today - datetime.timedelta(days=days_back)
 
     if len(stock_id) >= 4 and stock_id.isdigit():
         ticker_id = f"{stock_id}.TW"
